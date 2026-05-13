@@ -14,6 +14,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final TextEditingController searchController = TextEditingController();
 
+  final Color primaryColor = const Color(0xFF5CC5DF);
+  final Color secondaryColor = const Color(0xFFF5F6FA);
+  final Color textColor = const Color(0xFF2F3640);
+
   void cambiarSeccion(String seccion) {
     setState(() {
       seccionActual = seccion;
@@ -24,8 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String getTituloBuscador() {
     switch (seccionActual) {
-      case "alimentos":
-        return "Buscar alimento";
       case "farmacos":
         return "Buscar fármaco";
       case "chat":
@@ -37,8 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String getPlaceholder() {
     switch (seccionActual) {
-      case "alimentos":
-        return "Buscar alimentos...";
       case "farmacos":
         return "Buscar medicamentos...";
       case "chat":
@@ -80,18 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
       tarjetas.add(
         featureCard(
           "Chat IA",
-          "Haz preguntas sobre alimentos, ingredientes y medicamentos.",
-          Icons.chat,
-        ),
-      );
-    }
-
-    if (seccionActual != "alimentos") {
-      tarjetas.add(
-        featureCard(
-          "Alimentos",
-          "Consulta alimentos seguros según tus alergias.",
-          Icons.restaurant,
+          "Haz preguntas sobre ingredientes y medicamentos.",
+          Icons.chat_bubble_outline,
         ),
       );
     }
@@ -108,15 +98,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: secondaryColor,
       appBar: AppBar(
-        title: const Text("Alerjiate"),
+        backgroundColor: primaryColor,
+        elevation: 0,
+        title: const Text(
+          "Alerjiate",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           menuButton("Inicio", "inicio"),
-          menuButton("Alimentos", "alimentos"),
           menuButton("Fármacos", "farmacos"),
           menuButton("Chat IA", "chat"),
-
-          // Navegación real al login
           TextButton(
             onPressed: () {
               Navigator.push(
@@ -128,26 +121,36 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
       body: SingleChildScrollView(
         child: Column(
           children: [
             // HERO
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(25),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
+              decoration: BoxDecoration(
+                color: primaryColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+              ),
               child: const Column(
                 children: [
                   Text(
                     "Encuentra productos seguros para ti",
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 10),
                   Text(
                     "Plataforma inteligente para identificar alimentos y medicamentos compatibles con tus alergias.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
+                    style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                 ],
               ),
@@ -160,12 +163,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     getTituloBuscador(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
+                      color: textColor,
                     ),
                   ),
-
                   const SizedBox(height: 15),
 
                   Row(
@@ -174,17 +177,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: TextField(
                           controller: searchController,
                           decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
                             hintText: getPlaceholder(),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
                             ),
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 10),
-
                       ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.all(16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         onPressed: accionPrincipal,
                         child: const Icon(Icons.search),
                       ),
@@ -195,14 +206,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   Text(
                     resultado,
-                    style: const TextStyle(fontSize: 16),
+                    style: TextStyle(fontSize: 16, color: textColor),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
 
-            // TARJETAS DINÁMICAS
+            // TARJETAS
             Padding(
               padding: const EdgeInsets.all(20),
               child: Wrap(
@@ -221,29 +232,42 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget menuButton(String texto, String seccion) {
     return TextButton(
       onPressed: () => cambiarSeccion(seccion),
-      child: Text(texto, style: const TextStyle(color: Colors.white)),
+      child: Text(
+        texto,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 
   Widget featureCard(String titulo, String descripcion, IconData icono) {
     return Container(
       width: 180,
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: const [
+          BoxShadow(blurRadius: 8, spreadRadius: 1, color: Colors.black12),
+        ],
       ),
       child: Column(
         children: [
-          Icon(icono, size: 40),
+          Icon(icono, size: 40, color: primaryColor),
           const SizedBox(height: 10),
           Text(
             titulo,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          Text(descripcion, textAlign: TextAlign.center),
+          Text(
+            descripcion,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textColor),
+          ),
         ],
       ),
     );
