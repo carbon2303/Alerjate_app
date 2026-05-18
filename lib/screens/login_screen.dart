@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,12 +11,12 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController correoController = TextEditingController();
-
   final TextEditingController passwordController = TextEditingController();
 
   bool ocultarPassword = true;
+  bool cargando = false;
 
-  void iniciarSesion() {
+  Future<void> iniciarSesion() async {
     String correo = correoController.text.trim();
     String password = passwordController.text.trim();
 
@@ -26,10 +27,40 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
+    setState(() {
+      cargando = true;
+    });
+
+    final authService = AuthService();
+
+    final respuesta = await authService.login(correo, password);
+
+    setState(() {
+      cargando = false;
+    });
+
+    // LOGIN CORRECTO
+    if (respuesta != null && respuesta['access_token'] != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Inicio de sesión correcto"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } else {
+      // LOGIN INCORRECTO
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Correo o contraseña incorrectos"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -41,15 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget navButton(String texto) {
     return TextButton(
-      onPressed: () {
-        if (texto == "Inicio") {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      },
-
+      onPressed: () {},
       child: Text(
         texto,
         style: const TextStyle(
@@ -72,13 +95,13 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+
               color: const Color(0xFF03055D),
 
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
                 children: [
-                  // LOGO + NOMBRE
                   Row(
                     children: [
                       Image.asset('assets/logo.png', width: 55),
@@ -96,7 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
 
-                  // MENU
                   Wrap(
                     spacing: 10,
                     children: [
@@ -134,13 +156,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
+
                         children: [
-                          // LOGO
                           Image.asset('assets/logo.png', width: 90),
 
                           const SizedBox(height: 20),
 
-                          // TITULO
                           const Text(
                             "Iniciar sesión",
                             style: TextStyle(
@@ -151,7 +172,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           const SizedBox(height: 10),
 
-                          // SUBTITULO
                           const Text(
                             "Accede para consultar productos seguros para ti",
                             textAlign: TextAlign.center,
@@ -165,9 +185,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             decoration: InputDecoration(
                               hintText: "Correo electrónico",
-
-                              filled: true,
-                              fillColor: Colors.white,
 
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 20,
@@ -190,9 +207,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             decoration: InputDecoration(
                               hintText: "Contraseña",
-
-                              filled: true,
-                              fillColor: Colors.white,
 
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 20,
@@ -221,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           const SizedBox(height: 20),
 
-                          // BOTON
+                          // BOTON LOGIN
                           SizedBox(
                             width: double.infinity,
 
@@ -238,21 +252,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
 
-                              onPressed: iniciarSesion,
+                              onPressed: cargando ? null : iniciarSesion,
 
-                              child: const Text(
-                                "Entrar",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              child: cargando
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                  : const Text(
+                                      "Entrar",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ),
 
                           const SizedBox(height: 20),
 
-                          // REGISTRO
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
 
@@ -261,7 +278,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                               TextButton(
                                 onPressed: () {},
-
                                 child: const Text("Regístrate"),
                               ),
                             ],
