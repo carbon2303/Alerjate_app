@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/image_helper.dart';
 
 class ProductCard extends StatelessWidget {
   final String name;
@@ -15,6 +14,12 @@ class ProductCard extends StatelessWidget {
     required this.safe,
   });
 
+  String fixImage(String path) {
+    if (path.startsWith('http')) return path;
+
+    return 'https://alerjate-production.up.railway.app/$path';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -24,10 +29,7 @@ class ProductCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            blurRadius: 6,
-            color: Colors.black12,
-          )
+          BoxShadow(color: Colors.black12, blurRadius: 6),
         ],
       ),
       child: Column(
@@ -36,15 +38,15 @@ class ProductCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
-              ImageHelper.fixImage(image),
+              fixImage(image),
               height: 160,
               width: double.infinity,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) {
                 return Container(
                   height: 160,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.broken_image),
+                  color: Colors.grey.shade300,
+                  child: const Icon(Icons.image_not_supported),
                 );
               },
             ),
@@ -64,14 +66,11 @@ class ProductCard extends StatelessWidget {
             description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 12),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
-            safe ? " Seguro" : " Riesgo",
+            safe ? "🟢 Seguro" : "🔴 Riesgo",
             style: TextStyle(
               color: safe ? Colors.green : Colors.red,
               fontWeight: FontWeight.bold,

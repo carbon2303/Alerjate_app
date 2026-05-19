@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 
 class SemaphoreBanner extends StatelessWidget {
-  final String? status;
+  final String status;
 
   const SemaphoreBanner({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
-    final s = (status ?? "safe").toLowerCase();
-
     Color color;
     String text;
     IconData icon;
 
-    switch (s) {
+    switch (status) {
       case "danger":
         color = Colors.red;
         text = "PELIGRO";
@@ -49,7 +47,7 @@ class SemaphoreBanner extends StatelessWidget {
             text,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),

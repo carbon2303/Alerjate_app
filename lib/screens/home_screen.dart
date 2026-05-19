@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../services/product_service.dart';
 import '../services/local_storage.dart';
-
 import '../widgets/product_card.dart';
 import '../widgets/semaphore_banner.dart';
 import '../widgets/app_drawer.dart';
@@ -18,7 +16,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final ProductService _service = ProductService();
 
   List<Map<String, dynamic>> products = [];
-
   bool loading = true;
   bool searching = false;
 
@@ -81,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  // ================= SEARCH =================
+                  // BUSCADOR
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
@@ -105,11 +102,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   if (searching) const CircularProgressIndicator(),
 
-                  // ================= SEMÁFORO =================
+                  // SEMÁFORO
                   if (product is Map)
-                    SemaphoreBanner(status: product["status"]),
+                    SemaphoreBanner(status: product["status"] ?? "safe"),
 
-                  // ================= RESULTADO =================
+                  // RESULTADO
                   if (product is Map)
                     Container(
                       margin: const EdgeInsets.all(16),
@@ -122,18 +119,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             product["name"] ?? "",
                             style: const TextStyle(fontSize: 20),
                           ),
-                          Text(
-                            "Categoría: ${product["category"] ?? ""}",
-                          ),
+                          Text("Categoría: ${product["category"] ?? ""}"),
                           const SizedBox(height: 10),
                           const Text("Alérgenos:"),
                           Wrap(
                             spacing: 8,
                             children: allergens.map<Widget>((a) {
                               if (a is Map) {
-                                return Chip(
-                                  label: Text(a["name"] ?? ""),
-                                );
+                                return Chip(label: Text(a["name"] ?? ""));
                               }
                               return const SizedBox();
                             }).toList(),
@@ -150,13 +143,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // ================= LISTA =================
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: products.length,
-                    itemBuilder: (context, i) {
-                      final item = products[i];
+                    itemBuilder: (context, index) {
+                      final item = products[index];
 
                       return ProductCard(
                         name: item['name'] ?? '',
