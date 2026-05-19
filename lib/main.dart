@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
-import 'services/local_storage.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await LocalStorage.init();
-
   runApp(const MyApp());
 }
 
