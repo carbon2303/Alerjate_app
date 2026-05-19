@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/image_helper.dart';
 
 class ProductCard extends StatelessWidget {
   final String name;
@@ -17,84 +18,63 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-
+      margin: const EdgeInsets.all(10),
       padding: const EdgeInsets.all(12),
-
       decoration: BoxDecoration(
         color: Colors.white,
-
-        borderRadius: BorderRadius.circular(18),
-
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 6,
+            color: Colors.black12,
+          )
+        ],
       ),
-
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ======================
-          // IMAGEN
-          // ======================
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-
-            child: Image.asset(image, width: 90, height: 90, fit: BoxFit.cover),
+            child: Image.network(
+              ImageHelper.fixImage(image),
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) {
+                return Container(
+                  height: 160,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.broken_image),
+                );
+              },
+            ),
           ),
-
-          const SizedBox(width: 16),
-
-          // ======================
-          // INFO
-          // ======================
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                Text(
-                  name,
-
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Text(
-                  description,
-
-                  maxLines: 2,
-
-                  overflow: TextOverflow.ellipsis,
-
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-
-                const SizedBox(height: 12),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-
-                  decoration: BoxDecoration(
-                    color: safe ? Colors.green : Colors.red,
-
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-
-                  child: Text(
-                    safe ? "Seguro" : "Peligro",
-
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 10),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            safe ? " Seguro" : " Riesgo",
+            style: TextStyle(
+              color: safe ? Colors.green : Colors.red,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],

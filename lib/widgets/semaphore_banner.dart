@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
 class SemaphoreBanner extends StatelessWidget {
-  final String status;
+  final String? status;
 
   const SemaphoreBanner({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
+    final s = (status ?? "safe").toLowerCase();
+
     Color color;
     String text;
     IconData icon;
 
-    switch (status) {
+    switch (s) {
       case "danger":
         color = Colors.red;
         text = "PELIGRO";
@@ -32,30 +34,22 @@ class SemaphoreBanner extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-
-      padding: const EdgeInsets.all(20),
-
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
       ),
-
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-
         children: [
-          Icon(icon, color: Colors.white, size: 35),
-
+          Icon(icon, color: Colors.white, size: 32),
           const SizedBox(width: 10),
-
           Text(
             text,
-
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
