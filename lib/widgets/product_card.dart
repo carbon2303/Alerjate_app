@@ -37,14 +37,7 @@ class ProductCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
 
-            child: Image.asset(
-              'assets/images/food.png',
-
-              width: 90,
-              height: 90,
-
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset(image, width: 90, height: 90, fit: BoxFit.cover),
           ),
 
           const SizedBox(width: 16),
@@ -72,6 +65,7 @@ class ProductCard extends StatelessWidget {
                   description,
 
                   maxLines: 2,
+
                   overflow: TextOverflow.ellipsis,
 
                   style: TextStyle(color: Colors.grey[700]),

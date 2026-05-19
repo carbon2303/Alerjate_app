@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/product_service.dart';
 import '../services/local_storage.dart';
+import '../services/image_service.dart';
 
 import '../widgets/product_card.dart';
 import '../widgets/semaphore_banner.dart';
@@ -54,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // =========================
-  // BÚSQUEDA
+  // BUSCAR PRODUCTO
   // =========================
 
   Future<void> searchProduct() async {
@@ -81,19 +82,27 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       // ======================
-      // MENU LATERAL
+      // DRAWER
       // ======================
       drawer: const AppDrawer(),
 
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF5F7FA),
 
       // ======================
       // APPBAR
       // ======================
       appBar: AppBar(
-        title: const Text("ALERJATE"),
-        centerTitle: true,
+        backgroundColor: const Color(0xFF5CC5DF),
+
         elevation: 0,
+
+        centerTitle: true,
+
+        title: const Text(
+          "ALERJATE",
+
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
 
       // ======================
@@ -107,10 +116,68 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 children: [
                   // ======================
+                  // HERO SECTION
+                  // ======================
+                  Container(
+                    width: double.infinity,
+
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 40,
+                    ),
+
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF5CC5DF),
+
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(40),
+
+                        bottomRight: Radius.circular(40),
+                      ),
+                    ),
+
+                    child: Column(
+                      children: [
+                        Image.asset('assets/images/logo.png', height: 120),
+
+                        const SizedBox(height: 20),
+
+                        const Text(
+                          "Encuentra productos seguros para ti",
+
+                          textAlign: TextAlign.center,
+
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        Text(
+                          "Sistema inteligente para identificar alimentos y medicamentos compatibles con tus alergias.",
+
+                          textAlign: TextAlign.center,
+
+                          style: TextStyle(
+                            fontSize: 16,
+
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // ======================
                   // SEARCH BAR
                   // ======================
                   Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
 
                     child: Row(
                       children: [
@@ -119,15 +186,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             controller: searchController,
 
                             decoration: InputDecoration(
-                              hintText: "Buscar productos...",
+                              hintText: "Buscar producto...",
 
                               prefixIcon: const Icon(Icons.search),
 
                               filled: true,
+
                               fillColor: Colors.white,
 
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(18),
 
                                 borderSide: BorderSide.none,
                               ),
@@ -137,17 +205,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         const SizedBox(width: 10),
 
-                        ElevatedButton(
-                          onPressed: searchProduct,
+                        SizedBox(
+                          height: 55,
 
-                          child: const Text("Buscar"),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF06045E),
+
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+
+                            onPressed: searchProduct,
+
+                            child: const Text(
+                              "Buscar",
+
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
 
+                  const SizedBox(height: 20),
+
                   // ======================
-                  // LOADING SEARCH
+                  // SEARCH LOADING
                   // ======================
                   if (searching)
                     const Padding(
@@ -169,17 +255,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   // ======================
                   if (searchResult != null && searchResult!["product"] != null)
                     Container(
-                      margin: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.all(16),
 
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
 
                       decoration: BoxDecoration(
                         color: Colors.white,
 
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(22),
 
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 6),
+                          BoxShadow(color: Colors.black12, blurRadius: 8),
                         ],
                       ),
 
@@ -187,12 +273,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
 
                         children: [
-                          // PRODUCTO
                           Text(
                             searchResult!["product"]["name"],
 
                             style: const TextStyle(
-                              fontSize: 22,
+                              fontSize: 24,
 
                               fontWeight: FontWeight.bold,
                             ),
@@ -200,24 +285,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           const SizedBox(height: 10),
 
-                          // CATEGORÍA
                           Text(
                             "Categoría: ${searchResult!["product"]["category"]}",
+
+                            style: TextStyle(color: Colors.grey[700]),
                           ),
 
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 20),
 
-                          // ALÉRGENOS
                           const Text(
-                            "Alérgenos",
+                            "Alérgenos detectados",
 
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+
+                              fontSize: 16,
+                            ),
                           ),
 
                           const SizedBox(height: 10),
 
                           Wrap(
                             spacing: 8,
+
+                            runSpacing: 8,
 
                             children:
                                 (searchResult!["product"]["allergens"] as List)
@@ -238,13 +329,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   // TITULO
                   // ======================
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.symmetric(horizontal: 16),
 
                     child: Text(
                       "Productos destacados",
 
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 22,
 
                         fontWeight: FontWeight.bold,
                       ),
@@ -271,8 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         description: item['description'] ?? '',
 
-                        image:
-                            item['image'] ?? 'https://via.placeholder.com/150',
+                        image: ImageService.getImage(item['name'] ?? ''),
 
                         safe: item['safe'] ?? true,
                       );
