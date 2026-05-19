@@ -1,83 +1,57 @@
 import 'package:flutter/material.dart';
 
-import 'home_screen.dart';
-import 'register_screen.dart';
-
 import '../services/auth_service.dart';
-import '../services/local_storage.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController correoController = TextEditingController();
+class _RegisterScreenState extends State<RegisterScreen> {
+  final AuthService _authService = AuthService();
+
+  final TextEditingController nameController = TextEditingController();
+
+  final TextEditingController emailController = TextEditingController();
 
   final TextEditingController passwordController = TextEditingController();
 
   bool ocultarPassword = true;
-  bool cargando = false;
+  bool loading = false;
 
-  Future<void> iniciarSesion() async {
-    final correo = correoController.text.trim();
-
-    final password = passwordController.text.trim();
-
-    if (correo.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Completa todos los campos"),
-        ),
-      );
-
-      return;
-    }
-
+  Future<void> register() async {
     setState(() {
-      cargando = true;
+      loading = true;
     });
 
-    final authService = AuthService();
-
-    final token = await authService.login(
-      correo,
-      password,
+    final success = await _authService.register(
+      nameController.text.trim(),
+      emailController.text.trim(),
+      passwordController.text.trim(),
     );
 
-    if (mounted) {
-      setState(() {
-        cargando = false;
-      });
-    }
+    setState(() {
+      loading = false;
+    });
 
-    if (token != null) {
-      await LocalStorage.saveToken(token);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Usuario registrado"),
         ),
       );
+
+      Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Credenciales incorrectas"),
+          content: Text("Error al registrarse"),
           backgroundColor: Colors.red,
         ),
       );
     }
-  }
-
-  @override
-  void dispose() {
-    correoController.dispose();
-    passwordController.dispose();
-
-    super.dispose();
   }
 
   @override
@@ -105,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.health_and_safety,
+                  Icons.person_add_alt_1,
                   size: 70,
                   color: Color(0xFF06045E),
                 ),
@@ -113,9 +87,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
 
                 const Text(
-                  "Alerjate",
+                  "Crear Cuenta",
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 30,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF06045E),
                   ),
@@ -124,8 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
 
                 const Text(
-                  "Inicia sesión para consultar productos seguros",
-                  textAlign: TextAlign.center,
+                  "Regístrate para comenzar",
                   style: TextStyle(
                     color: Colors.grey,
                     fontSize: 15,
@@ -134,10 +107,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
 
+                // NOMBRE
+
                 TextField(
-                  controller: correoController,
+                  controller: nameController,
                   decoration: InputDecoration(
-                    labelText: "Correo electrónico",
+                    labelText: "Nombre",
+                    prefixIcon: const Icon(Icons.person),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // CORREO
+
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: "Correo",
                     prefixIcon: const Icon(
                       Icons.email_outlined,
                     ),
@@ -151,14 +143,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
+                // PASSWORD
+
                 TextField(
                   controller: passwordController,
                   obscureText: ocultarPassword,
                   decoration: InputDecoration(
                     labelText: "Contraseña",
-                    prefixIcon: const Icon(
-                      Icons.lock_outline,
-                    ),
+                    prefixIcon: const Icon(Icons.lock),
                     filled: true,
                     fillColor: Colors.grey[100],
                     border: OutlineInputBorder(
@@ -181,10 +173,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
 
+                // BOTON
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: cargando ? null : iniciarSesion,
+                    onPressed: loading ? null : register,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF06045E),
                       padding: const EdgeInsets.symmetric(
@@ -194,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: cargando
+                    child: loading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -204,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            "Entrar",
+                            "Registrarse",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -216,19 +210,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // ================= REGISTER =================
-
                 TextButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RegisterScreen(),
-                      ),
-                    );
+                    Navigator.pop(context);
                   },
                   child: const Text(
-                    "¿No tienes cuenta? Regístrate",
+                    "¿Ya tienes cuenta? Inicia sesión",
                     style: TextStyle(
                       color: Colors.grey,
                     ),

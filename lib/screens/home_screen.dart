@@ -27,6 +27,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final TextEditingController searchController = TextEditingController();
 
+  // ================= CHATBOT =================
+
+  final TextEditingController _chatController = TextEditingController();
+
+  String _chatResponse = "Haz una pregunta al asistente IA...";
+
+  bool _isChatLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> searchProduct() async {
     final query = searchController.text.trim();
+
     if (query.isEmpty) return;
 
     setState(() {
@@ -62,9 +71,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       searchResult = (data is Map<String, dynamic>) ? data : null;
+
       searching = false;
     });
   }
+
+  // ================= CHATBOT =================
+
+  Future<void> _sendChatMessage() async {
+    final message = _chatController.text.trim();
+
+    if (message.isEmpty) return;
+
+    setState(() {
+      _isChatLoading = true;
+    });
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    setState(() {
+      _chatResponse = "Respuesta del chatbot para: $message";
+
+      _isChatLoading = false;
+    });
+  }
+
+  // ===========================================
 
   @override
   Widget build(BuildContext context) {
@@ -75,12 +107,8 @@ class _HomeScreenState extends State<HomeScreen> {
         : [];
 
     return Scaffold(
-      // 🔥 DRAWER FUNCIONAL
       drawer: const AppDrawer(),
-
       backgroundColor: const Color(0xFFF5F7FA),
-
-      // 🔥 APPBAR FIX DEFINITIVO ICONO
       appBar: AppBar(
         backgroundColor: const Color(0xFF5CC5DF),
         centerTitle: true,
@@ -94,13 +122,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
           : ListView(
               padding: EdgeInsets.zero,
               children: [
                 // ================= HERO =================
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -113,8 +143,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: const Column(
                     children: [
-                      Icon(Icons.health_and_safety,
-                          size: 80, color: Colors.white),
+                      Icon(
+                        Icons.health_and_safety,
+                        size: 80,
+                        color: Colors.white,
+                      ),
                       SizedBox(height: 10),
                       Text(
                         "Encuentra productos seguros",
@@ -132,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
 
                 // ================= SEARCH =================
+
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -161,15 +195,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 10),
 
-                if (searching) const Center(child: CircularProgressIndicator()),
+                if (searching)
+                  const Center(
+                    child: CircularProgressIndicator(),
+                  ),
 
-                // ================= SEMÁFORO =================
+                // ================= SEMAFORO =================
+
                 if (product is Map)
-                  SemaphoreBanner(status: product["status"] ?? "safe"),
+                  SemaphoreBanner(
+                    status: product["status"] ?? "safe",
+                  ),
 
                 const SizedBox(height: 10),
 
                 // ================= RESULTADO =================
+
                 if (product is Map)
                   Container(
                     margin: const EdgeInsets.all(16),
@@ -188,18 +229,25 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text("Categoría: ${product["category"] ?? ""}"),
+                        Text(
+                          "Categoría: ${product["category"] ?? ""}",
+                        ),
                         const SizedBox(height: 10),
                         const Text(
                           "Alérgenos:",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Wrap(
                           spacing: 6,
                           children: allergens.map<Widget>((a) {
                             if (a is Map) {
-                              return Chip(label: Text(a["name"] ?? ""));
+                              return Chip(
+                                label: Text(a["name"] ?? ""),
+                              );
                             }
+
                             return const SizedBox();
                           }).toList(),
                         ),
@@ -207,15 +255,111 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
+                // ================= CHATBOT =================
+
+                Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(
+                      color: Colors.purple.shade900,
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "🤖 Asistente Médico IA",
+                          style: TextStyle(
+                            color: Colors.purpleAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          "Alerjate-Bot responderá tus preguntas.",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _chatController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Ej: ¿Puedo comer chocolate?',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple,
+                              ),
+                              onPressed:
+                                  _isChatLoading ? null : _sendChatMessage,
+                              child: _isChatLoading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      "PREGUNTAR",
+                                    ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black87,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _chatResponse,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _isChatLoading
+                                  ? Colors.purpleAccent
+                                  : Colors.white,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ================= PRODUCTS =================
+
                 const Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
                     "Productos destacados",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
 
-                // ================= PRODUCTS =================
                 ...products.map((item) {
                   return ProductCard(
                     name: item['name'] ?? '',
