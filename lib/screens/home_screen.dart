@@ -1,16 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-import '../services/product_service.dart';
 import '../services/local_storage.dart';
-import '../services/image_service.dart';
-import '../services/ai_service.dart';
-
-import '../widgets/product_card.dart';
-import '../widgets/semaphore_banner.dart';
-import '../widgets/app_drawer.dart';
-
-import '../chat/chat_message.dart';
-import '../chat/chat_storage.dart';
+import '../widgets/chat_widget.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,387 +14,377 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ProductService _service = ProductService();
-
-  // ================= PRODUCTS =================
-  List<Map<String, dynamic>> products = [];
-  bool loading = true;
-  bool searching = false;
-  Map<String, dynamic>? searchResult;
+  final String apiBase = "https://alerjate-production.up.railway.app/api";
 
   final TextEditingController searchController = TextEditingController();
 
-  // ================= CHAT =================
-  List<ChatMessage> messages = [];
-  final TextEditingController _chatController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  List products = [];
+  List allergens = [];
+  List<int> selectedAllergens = [];
 
-  bool _isChatLoading = false;
+  bool loading = false;
 
   @override
   void initState() {
     super.initState();
     loadProducts();
-    loadChat();
+    loadAllergens();
   }
 
+  // ================= TOKEN =================
+  Future<String?> token() async {
+    return await LocalStorage.getToken();
+  }
+
+  // ================= LOGOUT =================
+  Future<void> logout() async {
+    await LocalStorage.clearToken();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  // ================= PRODUCTOS =================
   Future<void> loadProducts() async {
-    final token = await LocalStorage.getToken();
+    setState(() => loading = true);
 
-    if (token == null) {
-      setState(() => loading = false);
-      return;
-    }
+    final t = await token();
+    if (t == null) return;
 
-    final data = await _service.getProducts(token);
+    final res = await http.get(
+      Uri.parse("$apiBase/products"),
+      headers: {
+        "Authorization": "Bearer $t",
+        "Accept": "application/json",
+      },
+    );
+
+    final data = jsonDecode(res.body);
 
     setState(() {
-      products = List<Map<String, dynamic>>.from(data);
+      products = data is List ? data : (data["products"] ?? []);
       loading = false;
     });
   }
 
-  Future<void> loadChat() async {
-    final data = await ChatStorage.load();
-    setState(() => messages = data);
-  }
+  // ================= BUSCADOR (ARREGLADO) =================
+  Future<void> search(String q) async {
+    final query = q.trim();
 
-  // ================= SEARCH =================
-  Future<void> searchProduct() async {
-    final query = searchController.text.trim();
-    if (query.isEmpty) return;
-
-    setState(() {
-      searching = true;
-      searchResult = null;
-    });
-
-    final data = await _service.searchProduct(query);
-
-    setState(() {
-      searchResult = (data is Map<String, dynamic>) ? data : null;
-      searching = false;
-    });
-  }
-
-  // ================= SEND MESSAGE =================
-  Future<void> sendMessage() async {
-    final text = _chatController.text.trim();
-    if (text.isEmpty) return;
-
-    setState(() {
-      messages.add(ChatMessage(text: text, isUser: true));
-      _isChatLoading = true;
-    });
-
-    _chatController.clear();
-    await ChatStorage.save(messages);
-    _scrollToBottom();
-
-    try {
-      final response = await AIService.sendMessage(messages);
-
-      setState(() {
-        messages.add(ChatMessage(text: response, isUser: false));
-      });
-    } catch (e) {
-      setState(() {
-        messages.add(ChatMessage(
-          text: "Error al conectar con la IA 😢",
-          isUser: false,
-        ));
-      });
+    if (query.isEmpty) {
+      await loadProducts();
+      return;
     }
 
-    setState(() => _isChatLoading = false);
+    setState(() => loading = true);
 
-    await ChatStorage.save(messages);
-    _scrollToBottom();
+    try {
+      final t = await token();
+      if (t == null) return;
+
+      final res = await http.post(
+        Uri.parse("$apiBase/search"),
+        headers: {
+          "Authorization": "Bearer $t",
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: jsonEncode({"query": query}),
+      );
+
+      final decoded = jsonDecode(res.body);
+
+      List result = [];
+
+      if (decoded is List) {
+        result = decoded;
+      } else if (decoded["products"] != null) {
+        result = decoded["products"];
+      } else if (decoded["data"] != null) {
+        result = decoded["data"];
+      } else if (decoded["result"] != null) {
+        result = decoded["result"];
+      }
+
+      setState(() {
+        products = result;
+        loading = false;
+      });
+    } catch (e) {
+      debugPrint("SEARCH ERROR: $e");
+
+      setState(() => loading = false);
+    }
   }
 
-  void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+  // ================= IMÁGENES =================
+  String getImage(p) {
+    const base = "https://alerjate-production.up.railway.app";
+
+    if (p["image_url"] != null) return p["image_url"];
+    if (p["image"] != null) return p["image"];
+    if (p["image_path"] != null) return p["image_path"];
+
+    if (p["barcode"] != null) {
+      return "$base/assets/images/${p["barcode"]}.png";
+    }
+
+    return "$base/assets/images/default.png";
+  }
+
+  // ================= ALÉRGENOS =================
+  Future<void> loadAllergens() async {
+    final t = await token();
+    if (t == null) return;
+
+    final res = await http.get(
+      Uri.parse("$apiBase/allergens"),
+      headers: {
+        "Authorization": "Bearer $t",
+        "Accept": "application/json",
+      },
+    );
+
+    final data = jsonDecode(res.body);
+
+    setState(() {
+      allergens = data is List ? data : [];
     });
   }
 
-  // ================= CHAT SHEET =================
-  Widget _buildChatSheet() {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 10),
+  Future<void> saveAllergens() async {
+    final t = await token();
+    if (t == null) return;
 
-          Container(
-            width: 50,
-            height: 5,
-            decoration: BoxDecoration(
-              color: Colors.grey,
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
+    await http.post(
+      Uri.parse("$apiBase/user/allergens"),
+      headers: {
+        "Authorization": "Bearer $t",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "allergen_ids": selectedAllergens,
+      }),
+    );
 
-          const SizedBox(height: 10),
+    Navigator.pop(context);
+  }
 
-          const ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Color.fromARGB(255, 63, 201, 255),
-              child: Icon(Icons.smart_toy, color: Colors.white),
-            ),
-            title: Text("Alerjate AI"),
-            subtitle: Text("Asistente inteligente"),
-          ),
+  // ================= MODAL EXPEDIENTE =================
+  void openAllergenModal() {
+    loadAllergens();
 
-          const Divider(),
+    showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setModal) {
+            return AlertDialog(
+              title: const Text("🛡️ Expediente clínico"),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: allergens.map((a) {
+                      final checked = selectedAllergens.contains(a["id"]);
 
-          // ================= CHAT LIST =================
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(12),
-              itemCount: messages.length,
-              itemBuilder: (context, i) {
-                final msg = messages[i];
-
-                return Align(
-                  alignment:
-                      msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: msg.isUser
-                          ? const Color.fromARGB(255, 61, 213, 255)
-                          : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      msg.text,
-                      style: TextStyle(
-                        color: msg.isUser ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          if (_isChatLoading)
-            const Padding(
-              padding: EdgeInsets.all(6),
-              child: Text("IA escribiendo..."),
-            ),
-
-          // ================= INPUT =================
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _chatController,
-                    decoration: const InputDecoration(
-                      hintText: "Escribe un mensaje...",
-                    ),
+                      return CheckboxListTile(
+                        value: checked,
+                        title: Text(a["name"]),
+                        onChanged: (v) {
+                          setModal(() {
+                            if (v == true) {
+                              selectedAllergens.add(a["id"]);
+                            } else {
+                              selectedAllergens.remove(a["id"]);
+                            }
+                          });
+                          setState(() {});
+                        },
+                      );
+                    }).toList(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  mini: true,
-                  backgroundColor: const Color.fromARGB(255, 67, 205, 255),
-                  onPressed: sendMessage,
-                  child: const Icon(Icons.send, color: Colors.white),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cerrar"),
+                ),
+                ElevatedButton(
+                  onPressed: saveAllergens,
+                  child: const Text("Guardar"),
                 )
               ],
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
+  // ================= MENU ITEM =================
+  Widget _menuItem(IconData icon, String text, VoidCallback onTap,
+      {Color color = const Color(0xFF06045E)}) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    final product = searchResult?["product"];
-
-    final allergens = (product is Map && product["allergens"] is List)
-        ? product["allergens"]
-        : [];
-
     return Scaffold(
-      drawer: const AppDrawer(),
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFFAFBFB),
 
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 51, 156, 255),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          "ALERJATE",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+        backgroundColor: const Color(0xFF06045E),
+        foregroundColor: Colors.white,
+        toolbarHeight: 75,
+        title: const Text("Alerjate"),
+      ),
+
+      // ================= DRAWER (8 SECCIONES) =================
+      drawer: Drawer(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(25),
+              color: const Color(0xFF06045E),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Icon(Icons.health_and_safety, color: Colors.white, size: 40),
+                  SizedBox(height: 10),
+                  Text(
+                    "Alerjate",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "Menú principal",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            _menuItem(Icons.home, "Inicio", () {
+              Navigator.pop(context);
+              loadProducts();
+            }),
+            _menuItem(Icons.search, "Buscar", () {
+              Navigator.pop(context);
+            }),
+            _menuItem(Icons.health_and_safety, "Expediente", () {
+              Navigator.pop(context);
+              openAllergenModal();
+            }),
+            _menuItem(Icons.favorite, "Favoritos", () {
+              Navigator.pop(context);
+            }),
+            _menuItem(Icons.history, "Historial", () {
+              Navigator.pop(context);
+            }),
+            _menuItem(Icons.notifications, "Notificaciones", () {
+              Navigator.pop(context);
+            }),
+            _menuItem(Icons.settings, "Configuración", () {
+              Navigator.pop(context);
+            }),
+            const Spacer(),
+            _menuItem(Icons.logout, "Cerrar sesión", logout, color: Colors.red),
+          ],
         ),
       ),
 
       // ================= BODY =================
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                // HERO
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(255, 0, 14, 121),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              // SEARCH
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: TextField(
+                  controller: searchController,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: search,
+                  decoration: InputDecoration(
+                    hintText: "Buscar productos...",
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
                     ),
                   ),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.health_and_safety,
-                          size: 80, color: Colors.white),
-                      SizedBox(height: 10),
-                      Text(
-                        "Encuentra productos seguros",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
+              ),
 
-                const SizedBox(height: 20),
+              // PRODUCTS
+              Expanded(
+                child: loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : products.isEmpty
+                        ? const Center(child: Text("Sin productos"))
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(10),
+                            itemCount: products.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.72,
+                            ),
+                            itemBuilder: (c, i) {
+                              final p = products[i];
 
-                // SEARCH
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: searchController,
-                          decoration: const InputDecoration(
-                            hintText: "Buscar producto...",
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      ElevatedButton(
-                        onPressed: searchProduct,
-                        child: const Text("Buscar"),
-                      )
-                    ],
-                  ),
-                ),
-
-                if (searching) const Center(child: CircularProgressIndicator()),
-
-                // SEMÁFORO
-                if (product is Map)
-                  SemaphoreBanner(
-                    status: product["status"] ?? "safe",
-                  ),
-
-                const SizedBox(height: 10),
-
-                // RESULTADO
-                if (product is Map)
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(product["name"] ?? "",
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
-                        Text("Categoría: ${product["category"] ?? ""}"),
-                        const SizedBox(height: 10),
-                        const Text("Alérgenos:",
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        Wrap(
-                          spacing: 6,
-                          children: allergens.map<Widget>((a) {
-                            if (a is Map) {
-                              return Chip(
-                                label: Text(a["name"] ?? ""),
-                                backgroundColor: Colors.red.shade50,
+                              return Container(
+                                margin: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: Image.network(
+                                        getImage(p),
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.image),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Text(
+                                        p["name"] ?? "",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    )
+                                  ],
+                                ),
                               );
-                            }
-                            return const SizedBox();
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                const SizedBox(height: 20),
-
-                // PRODUCTS
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    "Productos destacados",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-
-                ...products.map((item) {
-                  return ProductCard(
-                    name: item['name'] ?? '',
-                    description: item['description'] ?? '',
-                    image: ImageService.getImage(item['name'] ?? ''),
-                    safe: item['safe'] ?? true,
-                  );
-                }),
-
-                const SizedBox(height: 120),
-              ],
-            ),
-
-      // ================= FLOATING CHAT =================
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color.fromARGB(255, 1, 0, 69),
-        child: const Icon(Icons.chat, color: Colors.white),
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => _buildChatSheet(),
-          );
-        },
+                            },
+                          ),
+              ),
+            ],
+          ),
+          const ChatWidget(),
+        ],
       ),
     );
   }

@@ -1,20 +1,19 @@
+// lib/services/storage_service.dart
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LocalStorage {
-  static const String _tokenKey = "token";
-
+class StorageService {
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    await prefs.setString("alerjate_token", token);
   }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    return prefs.getString("alerjate_token");
   }
 
-  static Future<void> clearToken() async {
+  static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
+    await prefs.clear();
   }
 }
